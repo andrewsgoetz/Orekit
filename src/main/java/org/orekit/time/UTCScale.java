@@ -21,12 +21,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.TimeZone;
 
 import org.hipparchus.RealFieldElement;
 import org.hipparchus.util.FastMath;
 import org.orekit.annotation.DefaultDataContext;
 import org.orekit.data.DataContext;
 import org.orekit.errors.OrekitException;
+import org.orekit.errors.OrekitIllegalArgumentException;
 import org.orekit.errors.OrekitInternalError;
 import org.orekit.utils.Constants;
 
@@ -242,8 +244,10 @@ public class UTCScale implements TimeScale {
         return insideLeap(date.toAbsoluteDate());
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Check length of the current minute.
+     * @param date date to check
+     * @return 60 or 61 depending on leap seconds introduction
+     */
     public int minuteDuration(final AbsoluteDate date) {
         final int offsetIndex = findOffsetIndex(date);
         final UTCTAIOffset offset;
@@ -268,8 +272,11 @@ public class UTCScale implements TimeScale {
         return 60;
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Check length of the current minute.
+     * @param <T> field element type
+     * @param date date to check
+     * @return 60 or 61 depending on leap seconds introduction
+     */
     public <T extends RealFieldElement<T>> int minuteDuration(final FieldAbsoluteDate<T> date) {
         return minuteDuration(date.toAbsoluteDate());
     }
@@ -295,6 +302,34 @@ public class UTCScale implements TimeScale {
      */
     public <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
         return date.getField().getZero().add(getLeap(date.toAbsoluteDate()));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public AbsoluteDate createMJDDate(final int mjd, final double secondsInDay)
+        throws OrekitIllegalArgumentException {
+        final DateComponents dc = new DateComponents(DateComponents.MODIFIED_JULIAN_EPOCH, mjd);
+        final TimeComponents tc;
+        if (secondsInDay >= Constants.JULIAN_DAY) {
+            // check we are really allowed to use this number of seconds
+            final int    secondsA = 86399; // 23:59:59, i.e. 59s in the last minute of the day
+            final double secondsB = secondsInDay - secondsA;
+            final TimeComponents safeTC = new TimeComponents(secondsA, 0.0);
+            final AbsoluteDate safeDate = new AbsoluteDate(dc, safeTC, this);
+            if (this.minuteDuration(safeDate) > 59 + secondsB) {
+                // we are within the last minute of the day, the number of seconds is OK
+                return safeDate.shiftedBy(secondsB);
+            } else {
+                // let TimeComponents trigger an OrekitIllegalArgumentException
+                // for the wrong number of seconds
+                tc = new TimeComponents(secondsA, secondsB);
+            }
+        } else {
+            tc = new TimeComponents(secondsInDay);
+        }
+
+        // create the date
+        return new AbsoluteDate(dc, tc, this);
     }
 
     /** {@inheritDoc} */
@@ -413,6 +448,46 @@ public class UTCScale implements TimeScale {
 
         // build the components
         return new DateTimeComponents(dateComponents, timeComponents);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String dateToString(final AbsoluteDate date) {
+        return date.getComponents(this).toString(this.minuteDuration(date));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <T extends RealFieldElement<T>> String dateToString(final FieldAbsoluteDate<T> date) {
+        return date.getComponents(this).toString(this.minuteDuration(date));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String dateToString(final AbsoluteDate date, final TimeZone timeZone) {
+        final int minuteDuration = this.minuteDuration(date);
+        return date.getComponents(timeZone, this).toString(minuteDuration);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <T extends RealFieldElement<T>> String dateToString(final FieldAbsoluteDate<T> date, final TimeZone timeZone) {
+        final int minuteDuration = this.minuteDuration(date);
+        return date.getComponents(timeZone, this).toString(minuteDuration);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String dateToString(final AbsoluteDate date, final int minutesFromUTC) {
+        final int minuteDuration = this.minuteDuration(date);
+        return date.getComponents(minutesFromUTC, this).toString(minuteDuration);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <T extends RealFieldElement<T>>String dateToString(final FieldAbsoluteDate<T> date, final int minutesFromUTC) {
+        final int minuteDuration = this.minuteDuration(date);
+        return date.getComponents(minutesFromUTC, this).toString(minuteDuration);
     }
 
     /** Find the index of the offset valid at some date.
