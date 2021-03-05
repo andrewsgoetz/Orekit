@@ -219,8 +219,10 @@ public class UTCScale implements TimeScale {
         return offsets[offsets.length - 1].getDate();
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Check if date is within a leap second introduction.
+     * @param date date to check
+     * @return true if time is within a leap second introduction
+     */
     public boolean insideLeap(final AbsoluteDate date) {
         final int offsetIndex = findOffsetIndex(date);
         if (offsetIndex < 0) {
@@ -231,8 +233,11 @@ public class UTCScale implements TimeScale {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Check if date is within a leap second introduction.
+     * @param <T> field element type
+     * @param date date to check
+     * @return true if time is within a leap second introduction
+     */
     public <T extends RealFieldElement<T>> boolean insideLeap(final FieldAbsoluteDate<T> date) {
         return insideLeap(date.toAbsoluteDate());
     }
@@ -285,6 +290,124 @@ public class UTCScale implements TimeScale {
     @Override
     public <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
         return date.getField().getZero().add(getLeap(date.toAbsoluteDate()));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public DateTimeComponents getComponents(final AbsoluteDate date) {
+
+        final long epoch = date.getEpoch();
+        final double offset = date.getOffset();
+
+        if (Double.isInfinite(offset)) {
+            // special handling for past and future infinity
+            if (offset < 0) {
+                return new DateTimeComponents(DateComponents.MIN_EPOCH, TimeComponents.H00);
+            } else {
+                return new DateTimeComponents(DateComponents.MAX_EPOCH,
+                                              new TimeComponents(23, 59, 59.999));
+            }
+        }
+
+        // compute offset from 2000-01-01T00:00:00 in specified time scale exactly,
+        // using Møller-Knuth TwoSum algorithm without branching
+        // the following statements must NOT be simplified, they rely on floating point
+        // arithmetic properties (rounding and representable numbers)
+        // at the end, the EXACT result of addition offset + timeScale.offsetFromTAI(this)
+        // is sum + residual, where sum is the closest representable number to the exact
+        // result and residual is the missing part that does not fit in the first number
+        final double taiOffset = this.offsetFromTAI(date);
+        final double sum       = offset + taiOffset;
+        final double oPrime    = sum - taiOffset;
+        final double dPrime    = sum - oPrime;
+        final double deltaO    = offset - oPrime;
+        final double deltaD    = taiOffset - dPrime;
+        final double residual  = deltaO + deltaD;
+
+        // split date and time
+        final long   carry = (long) FastMath.floor(sum);
+        double offset2000B = (sum - carry) + residual;
+        long   offset2000A = epoch + carry + 43200l;
+        if (offset2000B < 0) {
+            offset2000A -= 1;
+            offset2000B += 1;
+        }
+        long time = offset2000A % 86400l;
+        if (time < 0l) {
+            time += 86400l;
+        }
+        final int dateOffset = (int) ((offset2000A - time) / 86400l);
+
+        // extract calendar elements
+        final DateComponents dateComponents = new DateComponents(DateComponents.J2000_EPOCH, dateOffset);
+
+        // extract time element, accounting for leap seconds
+        final double leap = this.insideLeap(date) ? this.getLeap(date) : 0;
+        final int minuteDuration = this.minuteDuration(date);
+        final TimeComponents timeComponents =
+                TimeComponents.fromSeconds((int) time, offset2000B, leap, minuteDuration);
+
+        // build the components
+        return new DateTimeComponents(dateComponents, timeComponents);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <T extends RealFieldElement<T>> DateTimeComponents getComponents(final FieldAbsoluteDate<T> date) {
+
+        final long epoch = date.getEpoch();
+        final T offset = date.getOffset();
+
+        if (Double.isInfinite(offset.getReal())) {
+            // special handling for past and future infinity
+            if (offset.getReal() < 0) {
+                return new DateTimeComponents(DateComponents.MIN_EPOCH, TimeComponents.H00);
+            } else {
+                return new DateTimeComponents(DateComponents.MAX_EPOCH,
+                                              new TimeComponents(23, 59, 59.999));
+            }
+        }
+
+        // compute offset from 2000-01-01T00:00:00 in specified time scale exactly,
+        // using Møller-Knuth TwoSum algorithm without branching
+        // the following statements must NOT be simplified, they rely on floating point
+        // arithmetic properties (rounding and representable numbers)
+        // at the end, the EXACT result of addition offset + timeScale.offsetFromTAI(this)
+        // is sum + residual, where sum is the closest representable number to the exact
+        // result and residual is the missing part that does not fit in the first number
+        final double taiOffset = this.offsetFromTAI(date).getReal();
+        final double sum       = offset.getReal() + taiOffset;
+        final double oPrime    = sum - taiOffset;
+        final double dPrime    = sum - oPrime;
+        final double deltaO    = offset.getReal() - oPrime;
+        final double deltaD    = taiOffset - dPrime;
+        final double residual  = deltaO + deltaD;
+
+        // split date and time
+        final long   carry = (long) FastMath.floor(sum);
+        double offset2000B = (sum - carry) + residual;
+        long   offset2000A = epoch + carry + 43200l;
+        if (offset2000B < 0) {
+            offset2000A -= 1;
+            offset2000B += 1;
+        }
+        long time = offset2000A % 86400l;
+        if (time < 0l) {
+            time += 86400l;
+        }
+        final int dateOffset = (int) ((offset2000A - time) / 86400l);
+
+        // extract calendar elements
+        final DateComponents dateComponents = new DateComponents(DateComponents.J2000_EPOCH, dateOffset);
+        // extract time element, accounting for leap seconds
+        final double leap =
+                this.insideLeap(date) ? this.getLeap(date.toAbsoluteDate()) : 0;
+        final int minuteDuration = this.minuteDuration(date);
+        final TimeComponents timeComponents =
+                TimeComponents.fromSeconds((int) time, offset2000B, leap, minuteDuration);
+
+        // build the components
+        return new DateTimeComponents(dateComponents, timeComponents);
     }
 
     /** Find the index of the offset valid at some date.

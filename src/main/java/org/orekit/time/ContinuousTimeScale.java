@@ -19,63 +19,14 @@ package org.orekit.time;
 import org.hipparchus.RealFieldElement;
 import org.hipparchus.util.FastMath;
 
-/** GLONASS time scale.
- * <p>By convention, TGLONASS = UTC + 3 hours.</p>
- * <p>The time scale is defined in <a
- * href="http://www.spacecorp.ru/upload/iblock/1c4/cgs-aaixymyt%205.1%20ENG%20v%202014.02.18w.pdf">
- * Global Navigation Sattelite System GLONASS - Interface Control document</a>, version 5.1 2008
- * (the typo in the title is in the original document title).
- * </p>
- * <p>This is intended to be accessed thanks to {@link TimeScales},
- * so there is no public constructor.</p>
- * @author Luc Maisonobe
- * @see AbsoluteDate
+/**
+ * A continuous {@link TimeScale} without leaps in which every day has 86400
+ * seconds.
  */
-public class GLONASSScale implements TimeScale {
+public abstract class ContinuousTimeScale implements TimeScale {
 
     /** Serializable UID. */
-    private static final long serialVersionUID = 20160331L;
-
-    /** Constant offset with respect to UTC (3 hours). */
-    private static final double OFFSET = 10800;
-
-    /** UTC time scale. */
-    private final UTCScale utc;
-
-    /** Package private constructor for the factory.
-     * @param utc underlying UTC scale
-     */
-    GLONASSScale(final UTCScale utc) {
-        this.utc = utc;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public double offsetFromTAI(final AbsoluteDate date) {
-        return OFFSET + utc.offsetFromTAI(date);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <T extends RealFieldElement<T>> T offsetFromTAI(final FieldAbsoluteDate<T> date) {
-        return utc.offsetFromTAI(date).add(OFFSET);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public double offsetToTAI(final DateComponents date, final TimeComponents time) {
-        final DateTimeComponents utcComponents =
-                        new DateTimeComponents(new DateTimeComponents(date, time), -OFFSET);
-        return utc.offsetToTAI(utcComponents.getDate(), utcComponents.getTime()) - OFFSET;
-    }
-
-    /** Check if date is within a leap second introduction.
-     * @param date date to check
-     * @return true if time is within a leap second introduction
-     */
-    public boolean insideLeap(final AbsoluteDate date) {
-        return utc.insideLeap(date);
-    }
+    private static final long serialVersionUID = -1243756924937497980L;
 
     /** {@inheritDoc} */
     @Override
@@ -126,11 +77,9 @@ public class GLONASSScale implements TimeScale {
         // extract calendar elements
         final DateComponents dateComponents = new DateComponents(DateComponents.J2000_EPOCH, dateOffset);
 
-        // extract time element, accounting for leap seconds
-        final double leap = this.insideLeap(date) ? this.getLeap(date) : 0;
-        final int minuteDuration = this.minuteDuration(date);
+        // extract time element
         final TimeComponents timeComponents =
-                TimeComponents.fromSeconds((int) time, offset2000B, leap, minuteDuration);
+                TimeComponents.fromSeconds((int) time, offset2000B, 0, 60);
 
         // build the components
         return new DateTimeComponents(dateComponents, timeComponents);
@@ -184,58 +133,13 @@ public class GLONASSScale implements TimeScale {
 
         // extract calendar elements
         final DateComponents dateComponents = new DateComponents(DateComponents.J2000_EPOCH, dateOffset);
-        // extract time element, accounting for leap seconds
-        final double leap =
-                this.insideLeap(date.toAbsoluteDate()) ? this.getLeap(date.toAbsoluteDate()) : 0;
-        final int minuteDuration = this.minuteDuration(date);
+
+        // extract time element
         final TimeComponents timeComponents =
-                TimeComponents.fromSeconds((int) time, offset2000B, leap, minuteDuration);
+                TimeComponents.fromSeconds((int) time, offset2000B, 0, 60);
 
         // build the components
         return new DateTimeComponents(dateComponents, timeComponents);
-    }
-
-    /** Check if date is within a leap second introduction.
-     * @param <T> field element type
-     * @param date date to check
-     * @return true if time is within a leap second introduction
-     */
-    public <T extends RealFieldElement<T>> boolean insideLeap(final FieldAbsoluteDate<T> date) {
-        return utc.insideLeap(date);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public int minuteDuration(final AbsoluteDate date) {
-        return utc.minuteDuration(date);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <T extends RealFieldElement<T>> int minuteDuration(final FieldAbsoluteDate<T> date) {
-        return utc.minuteDuration(date);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public double getLeap(final AbsoluteDate date) {
-        return utc.getLeap(date);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
-        return utc.getLeap(date);
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GLONASS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

@@ -25,7 +25,7 @@ import org.hipparchus.RealFieldElement;
  * so there is no public constructor.</p>
  * @see AbsoluteDate
  */
-public class BDTScale implements TimeScale {
+public class BDTScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20180323L;

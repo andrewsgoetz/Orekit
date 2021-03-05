@@ -28,7 +28,7 @@ import org.orekit.frames.EOPHistory;
  * @see AbsoluteDate
  * @since 5.1
  */
-public class UT1Scale implements TimeScale {
+public class UT1Scale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;

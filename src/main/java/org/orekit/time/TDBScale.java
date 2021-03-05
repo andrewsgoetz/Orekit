@@ -32,7 +32,7 @@ import org.orekit.utils.Constants;
  * where g = 357.53 + 0.9856003 (JD - 2451545) degrees.</p>
  * @author Aude Privat
  */
-public class TDBScale implements TimeScale {
+public class TDBScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
