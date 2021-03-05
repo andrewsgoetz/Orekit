@@ -189,7 +189,7 @@ public class UT1ScaleTest {
 
     @Test
     public void testDuringLeap() {
-        final TimeScale utc   = TimeScalesFactory.getUTC();
+        final UTCScale utc   = TimeScalesFactory.getUTC();
         final TimeScale scale = TimeScalesFactory.getUT1(IERSConventions.IERS_2010, true);
         final AbsoluteDate before = new AbsoluteDate(new DateComponents(1983, 06, 30),
                                                      new TimeComponents(23, 59, 59),
@@ -198,7 +198,6 @@ public class UT1ScaleTest {
         Assert.assertEquals(61, utc.minuteDuration(during));
         Assert.assertEquals(1.0, utc.getLeap(during), 1.0e-10);
         Assert.assertEquals(60, scale.minuteDuration(during));
-        Assert.assertEquals(0.0, scale.getLeap(during), 1.0e-10);
     }
 
     @Before

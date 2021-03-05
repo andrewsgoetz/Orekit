@@ -274,8 +274,10 @@ public class UTCScale implements TimeScale {
         return minuteDuration(date.toAbsoluteDate());
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Get the value of the previous leap.
+     * @param date date to check
+     * @return value of the previous leap
+     */
     public double getLeap(final AbsoluteDate date) {
         final int offsetIndex = findOffsetIndex(date);
         if (offsetIndex < 0) {
@@ -286,8 +288,11 @@ public class UTCScale implements TimeScale {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Get the value of the previous leap.
+     * @param <T> field element type
+     * @param date date to check
+     * @return value of the previous leap
+     */
     public <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
         return date.getField().getZero().add(getLeap(date.toAbsoluteDate()));
     }

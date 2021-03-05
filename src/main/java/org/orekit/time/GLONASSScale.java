@@ -216,14 +216,19 @@ public class GLONASSScale implements TimeScale {
         return utc.minuteDuration(date);
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Get the value of the previous leap.
+     * @param date date to check
+     * @return value of the previous leap
+     */
     public double getLeap(final AbsoluteDate date) {
         return utc.getLeap(date);
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Get the value of the previous leap.
+     * @param <T> field element type
+     * @param date date to check
+     * @return value of the previous leap
+     */
     public <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
         return utc.getLeap(date);
     }

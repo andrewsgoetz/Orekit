@@ -99,32 +99,6 @@ public interface TimeScale extends Serializable {
         return 60;
     }
 
-    /** Get the value of the previous leap.
-     * <p>
-     * This method will return 0.0 for all time scales that do <em>not</em>
-     * implement leap seconds.
-     * </p>
-     * @param date date to check
-     * @return value of the previous leap
-     */
-    default double getLeap(final AbsoluteDate date) {
-        return 0;
-    }
-
-    /** Get the value of the previous leap.
-     * <p>
-     * This method will return 0.0 for all time scales that do <em>not</em>
-     * implement leap seconds.
-     * </p>
-     * @param date date to check
-     * @param <T> type of the filed elements
-     * @return value of the previous leap
-     * @since 9.0
-     */
-    default <T extends RealFieldElement<T>> T getLeap(final FieldAbsoluteDate<T> date) {
-        return date.getField().getZero();
-    }
-
     /** Split a date into date/time components.
      * @param date date
      * @return date/time components
