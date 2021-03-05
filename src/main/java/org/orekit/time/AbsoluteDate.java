@@ -26,7 +26,6 @@ import org.orekit.data.DataContext;
 import org.orekit.errors.OrekitException;
 import org.orekit.errors.OrekitIllegalArgumentException;
 import org.orekit.errors.OrekitMessages;
-import org.orekit.utils.Constants;
 
 
 /** This class represents a specific instant in time.
@@ -869,33 +868,9 @@ public class AbsoluteDate
      * @exception OrekitIllegalArgumentException if seconds number is out of range
      */
     public static AbsoluteDate createMJDDate(final int mjd, final double secondsInDay,
-                                             final TimeScale timeScale)
-        throws OrekitIllegalArgumentException {
-        final DateComponents dc = new DateComponents(DateComponents.MODIFIED_JULIAN_EPOCH, mjd);
-        final TimeComponents tc;
-        if (secondsInDay >= Constants.JULIAN_DAY) {
-            // check we are really allowed to use this number of seconds
-            final int    secondsA = 86399; // 23:59:59, i.e. 59s in the last minute of the day
-            final double secondsB = secondsInDay - secondsA;
-            final TimeComponents safeTC = new TimeComponents(secondsA, 0.0);
-            final AbsoluteDate safeDate = new AbsoluteDate(dc, safeTC, timeScale);
-            if (timeScale.minuteDuration(safeDate) > 59 + secondsB) {
-                // we are within the last minute of the day, the number of seconds is OK
-                return safeDate.shiftedBy(secondsB);
-            } else {
-                // let TimeComponents trigger an OrekitIllegalArgumentException
-                // for the wrong number of seconds
-                tc = new TimeComponents(secondsA, secondsB);
-            }
-        } else {
-            tc = new TimeComponents(secondsInDay);
-        }
-
-        // create the date
-        return new AbsoluteDate(dc, tc, timeScale);
-
+                                             final TimeScale timeScale) {
+        return timeScale.createMJDDate(mjd, secondsInDay);
     }
-
 
     /** Build an instance corresponding to a Julian Epoch (JE).
      * <p>According to Lieske paper: <a
@@ -1046,58 +1021,7 @@ public class AbsoluteDate
      * @return date/time components
      */
     public DateTimeComponents getComponents(final TimeScale timeScale) {
-
-        if (Double.isInfinite(offset)) {
-            // special handling for past and future infinity
-            if (offset < 0) {
-                return new DateTimeComponents(DateComponents.MIN_EPOCH, TimeComponents.H00);
-            } else {
-                return new DateTimeComponents(DateComponents.MAX_EPOCH,
-                                              new TimeComponents(23, 59, 59.999));
-            }
-        }
-
-        // compute offset from 2000-01-01T00:00:00 in specified time scale exactly,
-        // using Møller-Knuth TwoSum algorithm without branching
-        // the following statements must NOT be simplified, they rely on floating point
-        // arithmetic properties (rounding and representable numbers)
-        // at the end, the EXACT result of addition offset + timeScale.offsetFromTAI(this)
-        // is sum + residual, where sum is the closest representable number to the exact
-        // result and residual is the missing part that does not fit in the first number
-        final double taiOffset = timeScale.offsetFromTAI(this);
-        final double sum       = offset + taiOffset;
-        final double oPrime    = sum - taiOffset;
-        final double dPrime    = sum - oPrime;
-        final double deltaO    = offset - oPrime;
-        final double deltaD    = taiOffset - dPrime;
-        final double residual  = deltaO + deltaD;
-
-        // split date and time
-        final long   carry = (long) FastMath.floor(sum);
-        double offset2000B = (sum - carry) + residual;
-        long   offset2000A = epoch + carry + 43200l;
-        if (offset2000B < 0) {
-            offset2000A -= 1;
-            offset2000B += 1;
-        }
-        long time = offset2000A % 86400l;
-        if (time < 0l) {
-            time += 86400l;
-        }
-        final int date = (int) ((offset2000A - time) / 86400l);
-
-        // extract calendar elements
-        final DateComponents dateComponents = new DateComponents(DateComponents.J2000_EPOCH, date);
-
-        // extract time element, accounting for leap seconds
-        final double leap = timeScale.insideLeap(this) ? timeScale.getLeap(this) : 0;
-        final int minuteDuration = timeScale.minuteDuration(this);
-        final TimeComponents timeComponents =
-                TimeComponents.fromSeconds((int) time, offset2000B, leap, minuteDuration);
-
-        // build the components
-        return new DateTimeComponents(dateComponents, timeComponents);
-
+        return timeScale.getComponents(this);
     }
 
     /** Split the instance into date/time components for a local time.
@@ -1355,7 +1279,7 @@ public class AbsoluteDate
      * in ISO-8601 format with milliseconds accuracy
      */
     public String toString(final TimeScale timeScale) {
-        return getComponents(timeScale).toString(timeScale.minuteDuration(this));
+        return timeScale.dateToString(this);
     }
 
     /** Get a String representation of the instant location for a local time.
@@ -1386,8 +1310,7 @@ public class AbsoluteDate
      * @since 10.1
      */
     public String toString(final int minutesFromUTC, final TimeScale utc) {
-        final int minuteDuration = utc.minuteDuration(this);
-        return getComponents(minutesFromUTC, utc).toString(minuteDuration);
+        return utc.dateToString(this, minutesFromUTC);
     }
 
     /** Get a String representation of the instant location for a time zone.
@@ -1415,8 +1338,7 @@ public class AbsoluteDate
      * @since 10.1
      */
     public String toString(final TimeZone timeZone, final TimeScale utc) {
-        final int minuteDuration = utc.minuteDuration(this);
-        return getComponents(timeZone, utc).toString(minuteDuration);
+        return utc.dateToString(this, timeZone);
     }
 
     /**
