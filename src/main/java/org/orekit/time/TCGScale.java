@@ -55,6 +55,7 @@ public class TCGScale extends ContinuousTimeScale {
      * @param tai TAI time scale.
      */
     TCGScale(final TimeScale tt, final TimeScale tai) {
+        super("TCG");
         referenceDate = new AbsoluteDate(1977, 01, 01, tai);
         ttOffset = tt.offsetFromTAI(referenceDate);
     }
@@ -69,16 +70,6 @@ public class TCGScale extends ContinuousTimeScale {
     @Override
     public <T extends RealFieldElement<T>> T offsetFromTAI(final FieldAbsoluteDate<T> date) {
         return date.durationFrom(referenceDate).multiply(LG_RATE).add(ttOffset);
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TCG";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

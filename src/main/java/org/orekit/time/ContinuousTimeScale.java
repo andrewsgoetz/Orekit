@@ -16,6 +16,7 @@
  */
 package org.orekit.time;
 
+import java.util.Objects;
 import java.util.TimeZone;
 
 import org.hipparchus.RealFieldElement;
@@ -31,6 +32,24 @@ public abstract class ContinuousTimeScale implements TimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = -1243756924937497980L;
+
+    /** Abbreviation for the time scale, e.g. TAI, UTC, UT1, etc. */
+    private final String abbreviation;
+
+    /**
+     * Constructs a {@link ContinuousTimeScale} instance.
+     * @param abbreviation abbrevation for the time scale, e.g. TAI, UTC, UT1, etc.,
+     *                     not null
+     */
+    public ContinuousTimeScale(final String abbreviation) {
+        this.abbreviation = Objects.requireNonNull(abbreviation);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String getName() {
+        return abbreviation;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -210,6 +229,12 @@ public abstract class ContinuousTimeScale implements TimeScale {
     @Override
     public <T extends RealFieldElement<T>>String dateToString(final FieldAbsoluteDate<T> date, final int minutesFromUTC) {
         return date.getComponents(minutesFromUTC, this).toString(60);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+        return abbreviation;
     }
 
 }

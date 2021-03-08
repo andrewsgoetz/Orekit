@@ -44,6 +44,7 @@ public class UT1Scale extends ContinuousTimeScale {
      * @param utc UTC time scale
      */
     protected UT1Scale(final EOPHistory eopHistory, final UTCScale utc) {
+        super("UT1");
         this.eopHistory = eopHistory;
         this.utc        = utc;
     }
@@ -77,16 +78,6 @@ public class UT1Scale extends ContinuousTimeScale {
         final T dtu1        = eopHistory == null ? date.getField().getZero() : eopHistory.getUT1MinusUTC(date);
         final T utcMinusTai = utc.offsetFromTAI(date);
         return utcMinusTai.add(dtu1);
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "UT1";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

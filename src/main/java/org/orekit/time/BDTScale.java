@@ -36,6 +36,7 @@ public class BDTScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     BDTScale() {
+        super("BDT");
     }
 
     /** {@inheritDoc} */
@@ -54,16 +55,6 @@ public class BDTScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "BDT";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

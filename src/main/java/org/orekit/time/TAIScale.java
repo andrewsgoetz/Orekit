@@ -32,6 +32,7 @@ public class TAIScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     TAIScale() {
+        super("TAI");
     }
 
     /** {@inheritDoc} */
@@ -50,16 +51,6 @@ public class TAIScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return 0;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TAI";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

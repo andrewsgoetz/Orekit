@@ -37,6 +37,7 @@ public class IRNSSScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     IRNSSScale() {
+        super("IRNSS");
     }
 
     /** {@inheritDoc} */
@@ -55,16 +56,6 @@ public class IRNSSScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "IRNSS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

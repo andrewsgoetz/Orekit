@@ -43,6 +43,7 @@ public class GalileoScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     GalileoScale() {
+        super("GST");
     }
 
     /** {@inheritDoc} */
@@ -61,16 +62,6 @@ public class GalileoScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GST";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

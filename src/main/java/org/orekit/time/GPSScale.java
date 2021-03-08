@@ -36,6 +36,7 @@ public class GPSScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     GPSScale() {
+        super("GPS");
     }
 
     /** {@inheritDoc} */
@@ -54,16 +55,6 @@ public class GPSScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GPS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

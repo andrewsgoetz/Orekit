@@ -65,6 +65,7 @@ public class GMSTScale extends ContinuousTimeScale {
      * @param ut1 Universal Time 1 scale
      */
     GMSTScale(final UT1Scale ut1) {
+        super("GMST");
         this.ut1           = ut1;
         this.referenceDate = new AbsoluteDate(2000, 1, 1, 12, 0, 0.0, ut1);
     }
@@ -109,16 +110,6 @@ public class GMSTScale extends ContinuousTimeScale {
         // normalize offset between -43200 and +43200 seconds
         return offset.subtract(FULL_DAY * FastMath.floor((offset.getReal() + HALF_DAY) / FULL_DAY));
 
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GMST";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

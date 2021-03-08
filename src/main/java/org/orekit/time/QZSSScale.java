@@ -40,6 +40,7 @@ public class QZSSScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     QZSSScale() {
+        super("QZSS");
     }
 
     /** {@inheritDoc} */
@@ -58,16 +59,6 @@ public class QZSSScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "QZSS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

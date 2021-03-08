@@ -62,6 +62,7 @@ public class TDBScale extends ContinuousTimeScale {
      * @param j2000Epoch reference date for this time scale.
      */
     TDBScale(final TimeScale tt, final AbsoluteDate j2000Epoch) {
+        super("TDB");
         this.tt = tt;
         this.j2000Epoch = j2000Epoch;
     }
@@ -81,16 +82,6 @@ public class TDBScale extends ContinuousTimeScale {
         final T g = dtDays.multiply(G1).add(G0).multiply(FastMath.PI / 180);
         return tt.offsetFromTAI(date).
                         add(g.sin().multiply(SIN_G_FACTOR).add(g.multiply(2).sin().multiply(SIN_2G_FACTOR)));
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TDB";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

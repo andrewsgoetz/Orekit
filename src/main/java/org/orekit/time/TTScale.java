@@ -38,6 +38,7 @@ public class TTScale extends ContinuousTimeScale {
     /** Package private constructor for the factory.
      */
     TTScale() {
+        super("TT");
     }
 
     /** {@inheritDoc} */
@@ -56,16 +57,6 @@ public class TTScale extends ContinuousTimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TT";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }
