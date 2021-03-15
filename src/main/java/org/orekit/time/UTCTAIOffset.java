@@ -167,4 +167,13 @@ public class UTCTAIOffset implements TimeStamped, Serializable {
         return offset + days * (slopeUTC * Constants.JULIAN_DAY) + fraction * slopeUTC;
     }
 
+    /** Get the TAI - UTC offset in seconds.
+     * @param mjd modified Julian day (UTC)
+     * @param mjdOffset modified Julian day offset (UTC)
+     * @return TAI - UTC offset in seconds
+     */
+    public double getOffset(final int mjd, final double mjdOffset) {
+        return offset + ((mjd - mjdRef) + mjdOffset) * (Constants.JULIAN_DAY * slopeUTC);
+    }
+
 }

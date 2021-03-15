@@ -464,6 +464,23 @@ public class UTCScaleTest {
         Assert.assertEquals(57204, lastOffset.getMJD()); // 2015-07-01
     }
 
+    @Test
+    public void testGetTAIMinusUTCAdjustment() {
+        Assert.assertEquals(1., utc.getTAIMinusUTCAdjustment(57204), 0.); // 2015-07-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(57203), 0.); // 2015-06-30
+        Assert.assertEquals(1., utc.getTAIMinusUTCAdjustment(49169), 0.); // 1993-07-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(49168), 0.); // 1993-06-30
+        Assert.assertEquals(1., utc.getTAIMinusUTCAdjustment(41499), 0.); // 1972-07-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(41498), 0.); // 1972-06-30
+        Assert.assertEquals(0.107758, utc.getTAIMinusUTCAdjustment(41317), 1e-14); // 1972-01-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(41316), 0.); // 1971-12-31
+        Assert.assertEquals(0.1, utc.getTAIMinusUTCAdjustment(38639), 2e-16); // 1964-09-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(38638), 0.); // 1964-08-31
+        Assert.assertEquals(1.422818, utc.getTAIMinusUTCAdjustment(37300), 0.); // 1960-01-01
+        Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(37299), 0.); // 1959-12-31
+
+    }
+
     @Before
     public void setUp() {
         Utils.setDataRoot("regular-data");
