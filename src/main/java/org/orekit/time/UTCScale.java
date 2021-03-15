@@ -304,6 +304,31 @@ public class UTCScale implements TimeScale {
         return date.getField().getZero().add(getLeap(date.toAbsoluteDate()));
     }
 
+    /**
+     * Returns the adjustment, if any, to TAI-UTC made at the <em>beginning</em> of
+     * the specified day.
+     * @param mjd modified Julian day (UTC)
+     * @return adjustment (seconds)
+     */
+    public double getTAIMinusUTCAdjustment(final int mjd) {
+        // Reverse linear search instead of binary search is fastest when most queries
+        // are for near-past, present, and future times.
+        for (int i = offsets.length - 1; i >= 0; --i) {
+            final UTCTAIOffset offset = offsets[i];
+            if (mjd == offset.getMJD()) {
+                double adjustment = offset.getOffset(mjd, 0.);
+                if (i > 0) {
+                    adjustment -= offsets[i - 1].getOffset(mjd, 0.);
+                }
+                return adjustment;
+            }
+            if (mjd > offset.getMJD()) {
+                break;
+            }
+        }
+        return 0.;
+    }
+
     /** {@inheritDoc} */
     @Override
     public AbsoluteDate createMJDDate(final int mjd, final double secondsInDay)
