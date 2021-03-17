@@ -17,6 +17,8 @@
 package org.orekit.time;
 
 import java.io.Serializable;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.TimeZone;
 
 import org.hipparchus.RealFieldElement;
@@ -65,6 +67,27 @@ public interface TimeScale extends Serializable {
         }
         return offset;
     }
+
+    /**
+     * Returns an {@link AbsoluteDate} obtained from the specified
+     * {@link TemporalAccessor}.
+     * @param temporal temporal accessor, not null
+     * @return date, not null
+     */
+    AbsoluteDate temporalToDate(TemporalAccessor temporal);
+
+    /**
+     * Returns a {@link TemporalAccessor} for the specified date.
+     * @param date date, not null
+     * @return temporal accessor, not null
+     */
+    TemporalAccessor dateToTemporal(AbsoluteDate date);
+
+    /**
+     * Returns the default formatter for formatting dates in the time scale.
+     * @return default formatter, not null
+     */
+    DateTimeFormatter getDefaultFormatter();
 
     /** Split a date into date/time components.
      * @param date date

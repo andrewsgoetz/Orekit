@@ -16,6 +16,11 @@
  */
 package org.orekit.time;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.time.temporal.JulianFields;
+import java.time.temporal.TemporalAccessor;
 import java.util.Objects;
 import java.util.TimeZone;
 
@@ -30,6 +35,11 @@ import org.orekit.utils.Constants;
  */
 public abstract class ContinuousTimeScale implements TimeScale {
 
+    /**
+     * J2000 epoch as a {@link LocalDateTime}.
+     */
+    private static final LocalDateTime J2000 = LocalDateTime.of(2000, 01, 01, 12, 00, 00);
+
     /** Serializable UID. */
     private static final long serialVersionUID = -1243756924937497980L;
 
@@ -38,8 +48,7 @@ public abstract class ContinuousTimeScale implements TimeScale {
 
     /**
      * Constructs a {@link ContinuousTimeScale} instance.
-     * @param abbreviation abbrevation for the time scale, e.g. TAI, UTC, UT1, etc.,
-     *                     not null
+     * @param abbreviation abbrevation for the time scale, e.g. TAI, UTC, UT1, etc., not null
      */
     public ContinuousTimeScale(final String abbreviation) {
         this.abbreviation = Objects.requireNonNull(abbreviation);
@@ -49,6 +58,68 @@ public abstract class ContinuousTimeScale implements TimeScale {
     @Override
     public String getName() {
         return abbreviation;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public AbsoluteDate temporalToDate(final TemporalAccessor temporal) {
+        final LocalDateTime localDateTime = LocalDateTime.from(temporal);
+        final int mjd = localDateTime.get(JulianFields.MODIFIED_JULIAN_DAY);
+        final double secondsInDay = localDateTime.get(ChronoField.NANO_OF_DAY) / 1000000000.;
+        final AbsoluteDate date = createMJDDate(mjd, secondsInDay);
+        return date;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public TemporalAccessor dateToTemporal(final AbsoluteDate date) {
+        return getTemporalAccessor(date.getEpoch(), date.getOffset(), this.offsetFromTAI(date));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public DateTimeFormatter getDefaultFormatter() {
+        return DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    }
+
+    /**
+     * Returns a {@link TemporalAccessor} corresponding to the specified time.
+     * @param j2000EpochSeconds seconds from this time scale's J2000 epoch
+     * @param offsetSeconds1    extra offset seconds, part 1
+     * @param offsetSeconds2    extra offset seconds, part 2
+     * @return temporal accessor, not null
+     */
+    private static TemporalAccessor getTemporalAccessor(final long j2000EpochSeconds, final double offsetSeconds1,
+            final double offsetSeconds2) {
+
+        // Special handling for past and future infinity.
+        if (Double.isInfinite(offsetSeconds1)) {
+            return offsetSeconds1 < 0 ? LocalDateTime.MIN : LocalDateTime.MAX;
+        }
+
+        // Use the Møller-Knuth TwoSum algorithm without branching
+        // to add offsetSeconds1 and offsetSeconds2. The following
+        // statements must NOT be simplified because they rely on
+        // floating point arithmetic properties (rounding and
+        // representable numbers). The result of the addition is
+        // sum + residual where 'sum' is the closest representable
+        // number to the exact result and 'residual' is the missing
+        // part that does not fit in 'sum'.
+        final double sum = offsetSeconds1 + offsetSeconds2;
+        final double oPrime = sum - offsetSeconds2;
+        final double dPrime = sum - oPrime;
+        final double deltaO = offsetSeconds1 - oPrime;
+        final double deltaD = offsetSeconds2 - dPrime;
+        final double residual = deltaO + deltaD;
+
+        final long longSeconds1 = j2000EpochSeconds;
+        final long longSeconds2 = FastMath.round(sum);
+        final double fractionalSeconds = (sum - longSeconds2) + residual;
+        final long nanoSeconds = (long) FastMath.floor(1000000000. * fractionalSeconds);
+
+        final LocalDateTime localDateTime = J2000.plusSeconds(longSeconds1 + longSeconds2).plusNanos(nanoSeconds);
+
+        return localDateTime;
     }
 
     /** {@inheritDoc} */

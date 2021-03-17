@@ -17,6 +17,11 @@
 package org.orekit.time;
 
 import java.io.Serializable;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.SignStyle;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -56,6 +61,9 @@ public class UTCScale implements TimeScale {
 
     /** UTC-TAI offsets. */
     private UTCTAIOffset[] offsets;
+
+    /** Default formatter. */
+    private DateTimeFormatter defaultFormatter;
 
     /** Package private constructor for the factory.
      * Used to create the prototype instance of this class that is used to
@@ -132,7 +140,6 @@ public class UTCScale implements TimeScale {
             this.offsets[i] = previous;
 
         }
-
     }
 
     /**
@@ -327,6 +334,50 @@ public class UTCScale implements TimeScale {
             }
         }
         return 0.;
+    }
+
+    @Override
+    public AbsoluteDate temporalToDate(final TemporalAccessor temporal) {
+        final int year = temporal.get(ChronoField.YEAR);
+        final int monthOfYear = temporal.get(ChronoField.MONTH_OF_YEAR);
+        final int dayOfMonth = temporal.get(ChronoField.DAY_OF_MONTH);
+        final int hourOfDay = temporal.get(ChronoField.HOUR_OF_DAY);
+        final int minuteOfHour = temporal.get(ChronoField.MINUTE_OF_HOUR);
+        final int secondOfMinute = temporal.get(new UTCFields.UTCSecondOfMinute(this));
+        final int nanoOfSecond = temporal.get(ChronoField.NANO_OF_SECOND);
+        final double second = secondOfMinute + ((double) nanoOfSecond) / 1000000000.;
+        final DateComponents dateComponents = new DateComponents(year, monthOfYear, dayOfMonth);
+        final TimeComponents timeComponents = new TimeComponents(hourOfDay, minuteOfHour, second);
+        final AbsoluteDate date = new AbsoluteDate(dateComponents, timeComponents, this);
+        return date;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public TemporalAccessor dateToTemporal(final AbsoluteDate date) {
+        return new UTCTemporalAccessor(date, this);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public DateTimeFormatter getDefaultFormatter() {
+        if (defaultFormatter == null) {
+            defaultFormatter = new DateTimeFormatterBuilder()
+                    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.DAY_OF_MONTH, 2)
+                    .appendLiteral('T')
+                    .appendValue(ChronoField.HOUR_OF_DAY, 2)
+                    .appendLiteral(':')
+                    .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+                    .appendLiteral(':')
+                    .appendValue(new UTCFields.UTCSecondOfMinute(this), 2, 19, SignStyle.NOT_NEGATIVE)
+                    .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+                    .toFormatter();
+        }
+        return defaultFormatter;
     }
 
     /** {@inheritDoc} */
