@@ -26,7 +26,7 @@ import org.hipparchus.RealFieldElement;
  * @author Luc Maisonobe
  * @see AbsoluteDate
  */
-public class IRNSSScale implements TimeScale {
+public class IRNSSScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20180323L;
@@ -37,6 +37,7 @@ public class IRNSSScale implements TimeScale {
     /** Package private constructor for the factory.
      */
     IRNSSScale() {
+        super("IRNSS");
     }
 
     /** {@inheritDoc} */
@@ -55,16 +56,6 @@ public class IRNSSScale implements TimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "IRNSS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

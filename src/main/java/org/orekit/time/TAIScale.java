@@ -24,7 +24,7 @@ import org.hipparchus.RealFieldElement;
  * @author Luc Maisonobe
  * @see AbsoluteDate
  */
-public class TAIScale implements TimeScale {
+public class TAIScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
@@ -32,6 +32,7 @@ public class TAIScale implements TimeScale {
     /** Package private constructor for the factory.
      */
     TAIScale() {
+        super("TAI");
     }
 
     /** {@inheritDoc} */
@@ -50,16 +51,6 @@ public class TAIScale implements TimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return 0;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TAI";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

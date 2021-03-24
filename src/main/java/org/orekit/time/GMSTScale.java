@@ -29,7 +29,7 @@ import org.orekit.utils.Constants;
  * @see AbsoluteDate
  * @since 5.1
  */
-public class GMSTScale implements TimeScale {
+public class GMSTScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
@@ -65,6 +65,7 @@ public class GMSTScale implements TimeScale {
      * @param ut1 Universal Time 1 scale
      */
     GMSTScale(final UT1Scale ut1) {
+        super("GMST");
         this.ut1           = ut1;
         this.referenceDate = new AbsoluteDate(2000, 1, 1, 12, 0, 0.0, ut1);
     }
@@ -109,16 +110,6 @@ public class GMSTScale implements TimeScale {
         // normalize offset between -43200 and +43200 seconds
         return offset.subtract(FULL_DAY * FastMath.floor((offset.getReal() + HALF_DAY) / FULL_DAY));
 
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GMST";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

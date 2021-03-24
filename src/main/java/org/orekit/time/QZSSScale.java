@@ -29,7 +29,7 @@ import org.hipparchus.RealFieldElement;
  * @author Luc Maisonobe
  * @see AbsoluteDate
  */
-public class QZSSScale implements TimeScale {
+public class QZSSScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
@@ -40,6 +40,7 @@ public class QZSSScale implements TimeScale {
     /** Package private constructor for the factory.
      */
     QZSSScale() {
+        super("QZSS");
     }
 
     /** {@inheritDoc} */
@@ -58,16 +59,6 @@ public class QZSSScale implements TimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "QZSS";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

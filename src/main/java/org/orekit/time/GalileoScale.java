@@ -32,7 +32,7 @@ import org.hipparchus.RealFieldElement;
  * @author Luc Maisonobe
  * @see AbsoluteDate
  */
-public class GalileoScale implements TimeScale {
+public class GalileoScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
@@ -43,6 +43,7 @@ public class GalileoScale implements TimeScale {
     /** Package private constructor for the factory.
      */
     GalileoScale() {
+        super("GST");
     }
 
     /** {@inheritDoc} */
@@ -61,16 +62,6 @@ public class GalileoScale implements TimeScale {
     @Override
     public double offsetToTAI(final DateComponents date, final TimeComponents time) {
         return -OFFSET;
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "GST";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

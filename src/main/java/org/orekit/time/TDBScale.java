@@ -32,7 +32,7 @@ import org.orekit.utils.Constants;
  * where g = 357.53 + 0.9856003 (JD - 2451545) degrees.</p>
  * @author Aude Privat
  */
-public class TDBScale implements TimeScale {
+public class TDBScale extends ContinuousTimeScale {
 
     /** Serializable UID. */
     private static final long serialVersionUID = 20131209L;
@@ -62,6 +62,7 @@ public class TDBScale implements TimeScale {
      * @param j2000Epoch reference date for this time scale.
      */
     TDBScale(final TimeScale tt, final AbsoluteDate j2000Epoch) {
+        super("TDB");
         this.tt = tt;
         this.j2000Epoch = j2000Epoch;
     }
@@ -81,16 +82,6 @@ public class TDBScale implements TimeScale {
         final T g = dtDays.multiply(G1).add(G0).multiply(FastMath.PI / 180);
         return tt.offsetFromTAI(date).
                         add(g.sin().multiply(SIN_G_FACTOR).add(g.multiply(2).sin().multiply(SIN_2G_FACTOR)));
-    }
-
-    /** {@inheritDoc} */
-    public String getName() {
-        return "TDB";
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-        return getName();
     }
 
 }

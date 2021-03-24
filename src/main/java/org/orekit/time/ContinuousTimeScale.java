@@ -16,45 +16,37 @@
  */
 package org.orekit.time;
 
-import org.hipparchus.RealFieldElement;
+import java.util.Objects;
 
-
-/** Beidou system time scale.
- * <p>By convention, BDT = UTC on January 1st 2006.</p>
- * <p>This is intended to be accessed thanks to {@link TimeScales},
- * so there is no public constructor.</p>
- * @see AbsoluteDate
+/**
+ * A continuous {@link TimeScale} without leaps in which every day has exactly 86400 seconds.
  */
-public class BDTScale extends ContinuousTimeScale {
+public abstract class ContinuousTimeScale implements TimeScale {
 
     /** Serializable UID. */
-    private static final long serialVersionUID = 20180323L;
+    private static final long serialVersionUID = -1243756924937497980L;
 
-    /** Offset from TAI. */
-    private static final double OFFSET = -33;
+    /** Abbreviation for the time scale, e.g. TAI, TT, UT1, etc. */
+    private final String abbreviation;
 
-    /** Package private constructor for the factory.
+    /**
+     * Constructs a {@link ContinuousTimeScale} instance.
+     * @param abbreviation abbreviation for the time scale, e.g. TAI, UTC, UT1, etc., not null
      */
-    BDTScale() {
-        super("BDT");
+    public ContinuousTimeScale(final String abbreviation) {
+        this.abbreviation = Objects.requireNonNull(abbreviation);
     }
 
     /** {@inheritDoc} */
     @Override
-    public double offsetFromTAI(final AbsoluteDate date) {
-        return OFFSET;
+    public String getName() {
+        return abbreviation;
     }
 
     /** {@inheritDoc} */
     @Override
-    public <T extends RealFieldElement<T>> T offsetFromTAI(final FieldAbsoluteDate<T> date) {
-        return date.getField().getZero().add(OFFSET);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public double offsetToTAI(final DateComponents date, final TimeComponents time) {
-        return -OFFSET;
+    public String toString() {
+        return abbreviation;
     }
 
 }
