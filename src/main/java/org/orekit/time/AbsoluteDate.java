@@ -17,6 +17,8 @@
 package org.orekit.time;
 
 import java.io.Serializable;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -503,6 +505,29 @@ public class AbsoluteDate
      */
     double getOffset() {
         return offset;
+    }
+
+    /**
+     * Parses an {@link AbsoluteDate} using the specified scale's default formatter.
+     * @param text  text, not null
+     * @param scale scale, not null
+     * @return parsed date, not null
+     */
+    public static AbsoluteDate parse(final CharSequence text, final TimeScale scale) {
+        return parse(text, scale.getDefaultFormatter(), scale);
+    }
+
+    /**
+     * Parses an {@link AbsoluteDate}.
+     * @param text      text, not null
+     * @param formatter formatter, not null
+     * @param scale     scale, not null
+     * @return parsed date, not null
+     */
+    public static AbsoluteDate parse(final CharSequence text, final DateTimeFormatter formatter, final TimeScale scale) {
+        final TemporalAccessor temporal = formatter.parse(text);
+        final AbsoluteDate date = scale.temporalToDate(temporal);
+        return date;
     }
 
     /** Build an instance from a CCSDS Unsegmented Time Code (CUC).
@@ -1411,6 +1436,28 @@ public class AbsoluteDate
      */
     public String toStringRfc3339(final TimeScale utc) {
         return this.getComponents(utc).toStringRfc3339();
+    }
+
+    /**
+     * Formats this date in the specified scale using the scale's default formatter.
+     * @param scale scale
+     * @return formatted date
+     * @see TimeScale#getDefaultFormatter()
+     */
+    public String format(final TimeScale scale) {
+        return format(scale, scale.getDefaultFormatter());
+    }
+
+    /**
+     * Formats this date in the specified scale.
+     * @param scale scale
+     * @param formatter formatter
+     * @return formatted date
+     */
+    public String format(final TimeScale scale, final DateTimeFormatter formatter) {
+        final TemporalAccessor temporal = scale.dateToTemporal(this);
+        final String formatted = formatter.format(temporal);
+        return formatted;
     }
 
 }

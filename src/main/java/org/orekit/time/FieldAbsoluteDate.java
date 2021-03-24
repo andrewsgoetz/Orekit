@@ -16,6 +16,8 @@
  */
 package org.orekit.time;
 
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -1559,6 +1561,27 @@ public class FieldAbsoluteDate<T extends RealFieldElement<T>>
     public String toString(final TimeZone timeZone, final TimeScale utc) {
         final int minuteDuration = utc.minuteDuration(this);
         return getComponents(timeZone, utc).toString(minuteDuration);
+    }
+
+    /**
+     * Formats this date in the specified scale using the scale's default formatter.
+     * @param scale scale
+     * @return formatted date
+     */
+    public String format(final TimeScale scale) {
+        return format(scale, scale.getDefaultFormatter());
+    }
+
+    /**
+     * Formats this date in the specified scale.
+     * @param scale scale
+     * @param formatter formatter
+     * @return formatted date
+     */
+    public String format(final TimeScale scale, final DateTimeFormatter formatter) {
+        final TemporalAccessor temporal = scale.dateToTemporal(this.toAbsoluteDate());
+        final String formatted = formatter.format(temporal);
+        return formatted;
     }
 
     /** Get a time-shifted date.

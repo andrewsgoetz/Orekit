@@ -23,9 +23,17 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.JulianFields;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.UnsupportedTemporalTypeException;
+import java.time.temporal.ValueRange;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +50,12 @@ import org.orekit.OrekitMatchers;
 import org.orekit.Utils;
 import org.orekit.errors.OrekitException;
 import org.orekit.errors.OrekitMessages;
+import org.orekit.time.UTCFields.AbstractUTCField;
+import org.orekit.time.UTCFields.UTCMicroOfDay;
+import org.orekit.time.UTCFields.UTCMilliOfDay;
+import org.orekit.time.UTCFields.UTCNanoOfDay;
+import org.orekit.time.UTCFields.UTCSecondOfDay;
+import org.orekit.time.UTCFields.UTCSecondOfMinute;
 import org.orekit.utils.Constants;
 
 public class UTCScaleTest {
@@ -479,6 +493,256 @@ public class UTCScaleTest {
         Assert.assertEquals(1.422818, utc.getTAIMinusUTCAdjustment(37300), 0.); // 1960-01-01
         Assert.assertEquals(0., utc.getTAIMinusUTCAdjustment(37299), 0.); // 1959-12-31
 
+    }
+
+    @Test
+    public void testDateToTemporal() {
+        // TemporalAccessor.isSupported(TemporalField)
+        final TemporalAccessor temporal1 = utc.dateToTemporal(AbsoluteDate.ARBITRARY_EPOCH);
+        final Set<ChronoField> unsupportedChronoFields = EnumSet.of(
+                ChronoField.NANO_OF_DAY,
+                ChronoField.MICRO_OF_DAY,
+                ChronoField.MILLI_OF_DAY,
+                ChronoField.SECOND_OF_MINUTE,
+                ChronoField.SECOND_OF_DAY,
+                ChronoField.INSTANT_SECONDS);
+        for (ChronoField chronoField : ChronoField.values()) {
+            Assert.assertEquals(!unsupportedChronoFields.contains(chronoField), temporal1.isSupported(chronoField));
+        }
+        Assert.assertTrue(temporal1.isSupported(new UTCMicroOfDay(utc)));
+        Assert.assertTrue(temporal1.isSupported(new UTCMilliOfDay(utc)));
+        Assert.assertTrue(temporal1.isSupported(new UTCNanoOfDay(utc)));
+        Assert.assertTrue(temporal1.isSupported(new UTCSecondOfDay(utc)));
+        Assert.assertTrue(temporal1.isSupported(new UTCSecondOfMinute(utc)));
+        Assert.assertFalse(temporal1.isSupported(new AbstractUTCField(utc, ChronoUnit.CENTURIES, ChronoUnit.MILLENNIA) {
+            @Override
+            public ValueRange rangeRefinedBy(final TemporalAccessor temporal) {
+                return null;
+            }
+        }));
+        Assert.assertTrue(temporal1.isSupported(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // TemporalAccessor.getLong(TemporalField)
+        for (ChronoField chronoField : unsupportedChronoFields) {
+            Assert.assertThrows(UnsupportedTemporalTypeException.class, () -> temporal1.getLong(chronoField));
+        }
+        final UTCScale utc2 = new UTCScale(TimeScalesFactory.getTAI(),
+                Collections.singletonList(new OffsetModel(new DateComponents(1972, 1, 1), 10)));
+        final TemporalAccessor temporal2 = utc.dateToTemporal(AbsoluteDate.ARBITRARY_EPOCH);
+        Assert.assertThrows(IllegalArgumentException.class, () -> temporal2.getLong(new UTCSecondOfDay(utc2)));
+        Assert.assertThrows(UnsupportedTemporalTypeException.class,
+                () -> temporal1.getLong(new AbstractUTCField(utc, ChronoUnit.CENTURIES, ChronoUnit.MILLENNIA) {
+                    @Override
+                    public ValueRange rangeRefinedBy(final TemporalAccessor temporal) {
+                        return null;
+                    }
+                }));
+
+        // 1971-12-31T23:59:59.500 UTC, 1972-01-01T00:00:09.392241985002414 TAI
+        // TAI-UTC adjustment at end of day was +0.107758 seconds
+        final AbsoluteDate date3 = new AbsoluteDate(1972, 1, 1, 0, 0, 9.392241985002414, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal3 = utc.dateToTemporal(date3);
+        Assert.assertEquals(3L, temporal3.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(1L, temporal3.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(5L, temporal3.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(53L, temporal3.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(1L, temporal3.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(11L, temporal3.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal3.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(31L, temporal3.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(5L, temporal3.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(365L, temporal3.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(729L, temporal3.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal3.getLong(ChronoField.ERA));
+        Assert.assertEquals(11L, temporal3.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal3.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(500L, temporal3.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(1439L, temporal3.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(59L, temporal3.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(12L, temporal3.getLong(ChronoField.MONTH_OF_YEAR));
+        Assert.assertEquals(500_000_000L, temporal3.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal3.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(23_663L, temporal3.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(1971L, temporal3.getLong(ChronoField.YEAR));
+        Assert.assertEquals(1971L, temporal3.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(86_399_500_000L, temporal3.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(86_399_500L, temporal3.getLong(new UTCMilliOfDay(utc)));
+        Assert.assertEquals(86_399_500_000_000L, temporal3.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(86_399L, temporal3.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(59L, temporal3.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(41316L, temporal3.getLong(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // 1971-12-31T23:59:60.100 UTC, 1972-01-01T00:00:09.992242003011143 TAI
+        // TAI-UTC adjustment at end of day was +0.107758 seconds
+        final AbsoluteDate date4 = new AbsoluteDate(1972, 1, 1, 0, 0, 9.992242003011143, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal4 = utc.dateToTemporal(date4);
+        Assert.assertEquals(3L, temporal4.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(1L, temporal4.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(5L, temporal4.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(53L, temporal4.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(1L, temporal4.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(11L, temporal4.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal4.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(31L, temporal4.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(5L, temporal4.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(365L, temporal4.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(729L, temporal4.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal4.getLong(ChronoField.ERA));
+        Assert.assertEquals(11L, temporal4.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal4.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(100L, temporal4.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(1439L, temporal4.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(59L, temporal4.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(12L, temporal4.getLong(ChronoField.MONTH_OF_YEAR));
+        // FIXME The commented-out test is close to passing (nano-of-second is 100000003).
+        // Assert.assertEquals(100_000_000L, temporal.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal4.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(23_663L, temporal4.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(1971L, temporal4.getLong(ChronoField.YEAR));
+        Assert.assertEquals(1971L, temporal4.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(86_400_100_000L, temporal4.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(86_400_100L, temporal4.getLong(new UTCMilliOfDay(utc)));
+        // FIXME The commented-out test is close to passing (nano-of-day is 86400100000003).
+        // Assert.assertEquals(86_400_100_000_000L, temporal.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(86_400L, temporal4.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(60L, temporal4.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(41316L, temporal4.getLong(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // 1997-06-30T23:59:59.500 UTC, 1997-07-01T00:00:29.500 TAI
+        // TAI-UTC adjustment at end of day was +1 seconds
+        final AbsoluteDate date5 = new AbsoluteDate(1997, 7, 1, 0, 0, 29.5, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal5 = utc.dateToTemporal(date5);
+        Assert.assertEquals(2L, temporal5.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(6L, temporal5.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(5L, temporal5.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(26L, temporal5.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(1L, temporal5.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(11L, temporal5.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal5.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(30L, temporal5.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(1L, temporal5.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(181L, temporal5.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(10_042L, temporal5.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal5.getLong(ChronoField.ERA));
+        Assert.assertEquals(11L, temporal5.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal5.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(500L, temporal5.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(1439L, temporal5.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(59L, temporal5.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(6L, temporal5.getLong(ChronoField.MONTH_OF_YEAR));
+        Assert.assertEquals(500_000_000L, temporal5.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal5.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(23_969L, temporal5.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(1997L, temporal5.getLong(ChronoField.YEAR));
+        Assert.assertEquals(1997L, temporal5.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(86_399_500_000L, temporal5.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(86_399_500L, temporal5.getLong(new UTCMilliOfDay(utc)));
+        Assert.assertEquals(86_399_500_000_000L, temporal5.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(86_399L, temporal5.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(59L, temporal5.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(50629L, temporal5.getLong(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // 1997-06-30T23:59:60.500 UTC, 1997-07-01T00:00:30.500 TAI
+        // TAI-UTC adjustment at end of day was +1 seconds
+        final AbsoluteDate date6 = new AbsoluteDate(1997, 7, 1, 0, 0, 30.5, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal6 = utc.dateToTemporal(date6);
+        Assert.assertEquals(2L, temporal6.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(6L, temporal6.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(5L, temporal6.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(26L, temporal6.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(1L, temporal6.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(11L, temporal6.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal6.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(30L, temporal6.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(1L, temporal6.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(181L, temporal6.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(10_042L, temporal6.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal6.getLong(ChronoField.ERA));
+        Assert.assertEquals(11L, temporal6.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(23L, temporal6.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(500L, temporal6.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(1439L, temporal6.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(59L, temporal6.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(6L, temporal6.getLong(ChronoField.MONTH_OF_YEAR));
+        Assert.assertEquals(500_000_000L, temporal6.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal6.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(23_969L, temporal6.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(1997L, temporal6.getLong(ChronoField.YEAR));
+        Assert.assertEquals(1997L, temporal6.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(86_400_500_000L, temporal6.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(86_400_500L, temporal6.getLong(new UTCMilliOfDay(utc)));
+        Assert.assertEquals(86_400_500_000_000L, temporal6.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(86_400L, temporal6.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(60L, temporal6.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(50629L, temporal6.getLong(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // 1997-07-01T00:00:00.500 UTC, 1997-07-01T00:00:31.500 TAI
+        // TAI-UTC adjustment at beginning of day was +1 seconds
+        final AbsoluteDate date7 = new AbsoluteDate(1997, 7, 1, 0, 0, 31.5, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal7 = utc.dateToTemporal(date7);
+        Assert.assertEquals(1L, temporal7.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(7L, temporal7.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(1L, temporal7.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(26L, temporal7.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(12L, temporal7.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(24L, temporal7.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(1L, temporal7.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(2L, temporal7.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(182L, temporal7.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(10_043L, temporal7.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal7.getLong(ChronoField.ERA));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(500L, temporal7.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(7L, temporal7.getLong(ChronoField.MONTH_OF_YEAR));
+        Assert.assertEquals(500_000_000L, temporal7.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal7.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(23_970L, temporal7.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(1997L, temporal7.getLong(ChronoField.YEAR));
+        Assert.assertEquals(1997L, temporal7.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(500_000L, temporal7.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(500L, temporal7.getLong(new UTCMilliOfDay(utc)));
+        Assert.assertEquals(500_000_000L, temporal7.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(0L, temporal7.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(0L, temporal7.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(50630L, temporal7.getLong(JulianFields.MODIFIED_JULIAN_DAY));
+
+        // 2006-04-14T09:55:38.8327681089 UTC, 2006-04-14T09:56:11.8327681089 TAI
+        // Test fields are truncated, not rounded.
+        final AbsoluteDate date8 = new AbsoluteDate(2006, 4, 14, 9, 56, 11.8327681089, TimeScalesFactory.getTAI());
+        final TemporalAccessor temporal8 = utc.dateToTemporal(date8);
+        Assert.assertEquals(7L, temporal8.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        Assert.assertEquals(6L, temporal8.getLong(ChronoField.ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        Assert.assertEquals(2L, temporal8.getLong(ChronoField.ALIGNED_WEEK_OF_MONTH));
+        Assert.assertEquals(15L, temporal8.getLong(ChronoField.ALIGNED_WEEK_OF_YEAR));
+        Assert.assertEquals(0L, temporal8.getLong(ChronoField.AMPM_OF_DAY));
+        Assert.assertEquals(9L, temporal8.getLong(ChronoField.CLOCK_HOUR_OF_AMPM));
+        Assert.assertEquals(9L, temporal8.getLong(ChronoField.CLOCK_HOUR_OF_DAY));
+        Assert.assertEquals(14L, temporal8.getLong(ChronoField.DAY_OF_MONTH));
+        Assert.assertEquals(5L, temporal8.getLong(ChronoField.DAY_OF_WEEK));
+        Assert.assertEquals(104L, temporal8.getLong(ChronoField.DAY_OF_YEAR));
+        Assert.assertEquals(13_252L, temporal8.getLong(ChronoField.EPOCH_DAY));
+        Assert.assertEquals(1L, temporal8.getLong(ChronoField.ERA));
+        Assert.assertEquals(9L, temporal8.getLong(ChronoField.HOUR_OF_AMPM));
+        Assert.assertEquals(9L, temporal8.getLong(ChronoField.HOUR_OF_DAY));
+        Assert.assertEquals(832L, temporal8.getLong(ChronoField.MILLI_OF_SECOND));
+        Assert.assertEquals(595L, temporal8.getLong(ChronoField.MINUTE_OF_DAY));
+        Assert.assertEquals(55L, temporal8.getLong(ChronoField.MINUTE_OF_HOUR));
+        Assert.assertEquals(4L, temporal8.getLong(ChronoField.MONTH_OF_YEAR));
+        Assert.assertEquals(832_768_108L, temporal8.getLong(ChronoField.NANO_OF_SECOND));
+        Assert.assertEquals(0L, temporal8.getLong(ChronoField.OFFSET_SECONDS));
+        Assert.assertEquals(24_075L, temporal8.getLong(ChronoField.PROLEPTIC_MONTH));
+        Assert.assertEquals(2006L, temporal8.getLong(ChronoField.YEAR));
+        Assert.assertEquals(2006L, temporal8.getLong(ChronoField.YEAR_OF_ERA));
+        Assert.assertEquals(35_738_832_768L, temporal8.getLong(new UTCMicroOfDay(utc)));
+        Assert.assertEquals(35_738_832L, temporal8.getLong(new UTCMilliOfDay(utc)));
+        Assert.assertEquals(35_738_832_768_108L, temporal8.getLong(new UTCNanoOfDay(utc)));
+        Assert.assertEquals(35_738L, temporal8.getLong(new UTCSecondOfDay(utc)));
+        Assert.assertEquals(38L, temporal8.getLong(new UTCSecondOfMinute(utc)));
+        Assert.assertEquals(53839L, temporal8.getLong(JulianFields.MODIFIED_JULIAN_DAY));
     }
 
     @Before

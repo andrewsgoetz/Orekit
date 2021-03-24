@@ -17,10 +17,21 @@
 package org.orekit.time;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.time.chrono.IsoChronology;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
+import java.time.format.SignStyle;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalField;
+import java.time.temporal.UnsupportedTemporalTypeException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import org.hipparchus.RealFieldElement;
 import org.hipparchus.util.FastMath;
@@ -28,6 +39,12 @@ import org.orekit.annotation.DefaultDataContext;
 import org.orekit.data.DataContext;
 import org.orekit.errors.OrekitException;
 import org.orekit.errors.OrekitInternalError;
+import org.orekit.time.UTCFields.UTCField;
+import org.orekit.time.UTCFields.UTCMicroOfDay;
+import org.orekit.time.UTCFields.UTCMilliOfDay;
+import org.orekit.time.UTCFields.UTCNanoOfDay;
+import org.orekit.time.UTCFields.UTCSecondOfDay;
+import org.orekit.time.UTCFields.UTCSecondOfMinute;
 import org.orekit.utils.Constants;
 
 /** Coordinated Universal Time.
@@ -54,6 +71,9 @@ public class UTCScale implements TimeScale {
 
     /** UTC-TAI offsets. */
     private UTCTAIOffset[] offsets;
+
+    /** Default formatter. */
+    private DateTimeFormatter defaultFormatter;
 
     /** Package private constructor for the factory.
      * Used to create the prototype instance of this class that is used to
@@ -193,6 +213,60 @@ public class UTCScale implements TimeScale {
             return offset.getOffset(date, time);
         }
 
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public AbsoluteDate temporalToDate(final TemporalAccessor temporal) {
+        final int year = temporal.get(ChronoField.YEAR);
+        final int monthOfYear = temporal.get(ChronoField.MONTH_OF_YEAR);
+        final int dayOfMonth = temporal.get(ChronoField.DAY_OF_MONTH);
+        final int hourOfDay = temporal.get(ChronoField.HOUR_OF_DAY);
+        final int minuteOfHour = temporal.get(ChronoField.MINUTE_OF_HOUR);
+        final int secondOfMinute = temporal.get(new UTCFields.UTCSecondOfMinute(this));
+        final int nanoOfSecond = temporal.get(ChronoField.NANO_OF_SECOND);
+        final double second = secondOfMinute + ((double) nanoOfSecond) / 1000000000.;
+        final DateComponents dateComponents = new DateComponents(year, monthOfYear, dayOfMonth);
+        final TimeComponents timeComponents = new TimeComponents(hourOfDay, minuteOfHour, second);
+        final AbsoluteDate date = new AbsoluteDate(dateComponents, timeComponents, this);
+        return date;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public TemporalAccessor dateToTemporal(final AbsoluteDate date) {
+        final DateTimeComponents dateTimeComponents = date.getComponents(this);
+        return new UTCTemporalAccessor(this,
+                dateTimeComponents.getDate().getYear(),
+                dateTimeComponents.getDate().getMonth(),
+                dateTimeComponents.getDate().getDay(),
+                dateTimeComponents.getTime().getHour(),
+                dateTimeComponents.getTime().getMinute(),
+                dateTimeComponents.getTime().getSecond());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public DateTimeFormatter getDefaultFormatter() {
+        if (defaultFormatter == null) {
+            defaultFormatter = new DateTimeFormatterBuilder()
+                    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+                    .appendLiteral('-')
+                    .appendValue(ChronoField.DAY_OF_MONTH, 2)
+                    .appendLiteral('T')
+                    .appendValue(ChronoField.HOUR_OF_DAY, 2)
+                    .appendLiteral(':')
+                    .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+                    .appendLiteral(':')
+                    .appendValue(new UTCFields.UTCSecondOfMinute(this), 2, 19, SignStyle.NOT_NEGATIVE)
+                    .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+                    .toFormatter()
+                    .withResolverStyle(ResolverStyle.STRICT)
+                    .withChronology(IsoChronology.INSTANCE);
+        }
+        return defaultFormatter;
     }
 
     /** {@inheritDoc} */
@@ -391,6 +465,116 @@ public class UTCScale implements TimeScale {
             } catch (OrekitException oe) {
                 throw new OrekitInternalError(oe);
             }
+        }
+
+    }
+
+    /**
+     * An implementation of {@link TemporalAccessor} appropriate for a UTC time.
+     */
+    final class UTCTemporalAccessor implements TemporalAccessor {
+
+        /** UTC scale. */
+        private final UTCScale utcScale;
+        /** Local date-time with all fields correct except for second-of-minute. */
+        private final LocalDateTime localDateTime; // with second-of-minute set equal to 0
+        /** Hour-of-day. */
+        private final int hourOfDay;
+        /** Minute-of-hour. */
+        private final int minuteOfHour;
+        /** Second-of-minute. */
+        private final int secondOfMinute;
+        /** Nano-of-second. */
+        private final int nanoOfSecond;
+
+        /**
+         * Constructs a {@link UtcTemporalAccessor} instance.
+         * @param utcScale UTC scale, not null
+         * @param year year
+         * @param monthOfYear month of year (1-based)
+         * @param dayOfMonth day of month (1-based)
+         * @param hourOfDay hour of day (0-based)
+         * @param minuteOfHour minute of hour (0-based)
+         * @param seconds seconds in minute
+         */
+        private UTCTemporalAccessor(final UTCScale utcScale, final int year, final int monthOfYear, final int dayOfMonth,
+                final int hourOfDay, final int minuteOfHour, final double seconds) {
+            this.utcScale = Objects.requireNonNull(utcScale);
+            this.hourOfDay = hourOfDay;
+            this.minuteOfHour = minuteOfHour;
+            this.secondOfMinute = (int) seconds;
+            this.nanoOfSecond = (int) (1000000000. * (seconds - this.secondOfMinute)); // truncate, not round
+            this.localDateTime = LocalDateTime.of(
+                    year,
+                    monthOfYear,
+                    dayOfMonth,
+                    hourOfDay,
+                    minuteOfHour,
+                    0, // second-of-minute not used
+                    nanoOfSecond);
+        }
+
+        @Override
+        public boolean isSupported(final TemporalField field) {
+            if (field instanceof ChronoField) {
+                switch ((ChronoField) field) {
+                    case NANO_OF_DAY:
+                    case MICRO_OF_DAY:
+                    case MILLI_OF_DAY:
+                    case SECOND_OF_MINUTE:
+                    case SECOND_OF_DAY:
+                        return false;
+                    case OFFSET_SECONDS:
+                        return true;
+                    default:
+                        return localDateTime.isSupported(field);
+                }
+            } else if (field instanceof UTCField) {
+                return field instanceof UTCSecondOfMinute ||
+                        field instanceof UTCSecondOfDay ||
+                        field instanceof UTCNanoOfDay ||
+                        field instanceof UTCMicroOfDay ||
+                        field instanceof UTCMilliOfDay;
+            }
+            return field.isSupportedBy(this);
+        }
+
+        @Override
+        public long getLong(final TemporalField field) {
+            if (field instanceof ChronoField) {
+                switch ((ChronoField) field) {
+                    case NANO_OF_DAY:
+                    case MICRO_OF_DAY:
+                    case MILLI_OF_DAY:
+                    case SECOND_OF_MINUTE:
+                    case SECOND_OF_DAY:
+                        throw new UnsupportedTemporalTypeException(
+                            String.format("Unsupported field: %s, use corresponding UTCField instead", field));
+                    case OFFSET_SECONDS:
+                        return 0L;
+                    default:
+                        return localDateTime.getLong(field);
+                }
+            } else if (field instanceof UTCField) {
+                final UTCField utcField = (UTCField) field;
+                if (!this.utcScale.equals(utcField.getUTCScale())) {
+                    throw new IllegalArgumentException("UTC scale of UTCField must match UTC scale of UTCTemporalAccessor");
+                } else if (utcField instanceof UTCSecondOfMinute) {
+                    return secondOfMinute;
+                } else if (utcField instanceof UTCSecondOfDay) {
+                    return 3600L * hourOfDay + 60L * minuteOfHour + secondOfMinute;
+                } else if (utcField instanceof UTCNanoOfDay) {
+                    return 3600000000000L * hourOfDay + 60000000000L * minuteOfHour + 1000000000L * secondOfMinute + nanoOfSecond;
+                } else if (utcField instanceof UTCMicroOfDay) {
+                    final int microOfSecond = nanoOfSecond / 1000;
+                    return 3600000000L * hourOfDay + 60000000L * minuteOfHour + 1000000L * secondOfMinute + microOfSecond;
+                } else if (utcField instanceof UTCMilliOfDay) {
+                    final int milliOfSecond = nanoOfSecond / 1000000;
+                    return 3600000L * hourOfDay + 60000L * minuteOfHour + 1000L * secondOfMinute + milliOfSecond;
+                }
+                throw new UnsupportedTemporalTypeException("Unsupported field: " + field);
+            }
+            return field.getFrom(this);
         }
 
     }
